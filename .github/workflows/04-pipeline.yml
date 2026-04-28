@@ -1,10 +1,8 @@
 name: CI Pipeline
-
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   lint:
@@ -13,29 +11,31 @@ jobs:
       - run: echo "린트 통과"
 
   unit-test:
-    needs: lint
     runs-on: ubuntu-latest
+    needs: lint
     outputs:
       passed_count: ${{ steps.count.outputs.value }}
     steps:
       - id: count
-        run: echo "value=5" >> $GITHUB_OUTPUT
-      - run: echo "테스트 통과: 5/5"
+        run: |
+          echo "value=5" >> $GITHUB_OUTPUT
+          echo "테스트 통과: 5/5"
 
   build:
-    needs: lint
     runs-on: ubuntu-latest
+    needs: lint
     outputs:
       artifact_name: ${{ steps.set-name.outputs.value }}
     steps:
       - id: set-name
-        run: echo "value=myapp-${{ github.run_number }}.jar" >> $GITHUB_OUTPUT
-      - run: echo "빌드 완료"
+        run: |
+          echo "value=myapp-${{ github.run_number }}.jar" >> $GITHUB_OUTPUT
+          echo "빌드 완료"
 
   deploy:
-    needs: [unit-test, build]
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    needs: [unit-test, build]
+    if: ${{ github.ref_name == 'main' }}
     steps:
       - run: |
           echo "테스트 통과 수: ${{ needs.unit-test.outputs.passed_count }}"
@@ -43,12 +43,13 @@ jobs:
           echo "배포 환경: production"
 
   notify:
-    needs: [lint, unit-test, build, deploy]
-    if: always()
     runs-on: ubuntu-latest
+    needs: [lint, unit-test, build, deploy]
+    if: ${{ always() }}
     steps:
       - run: |
           echo "=== 파이프라인 결과 ==="
           echo "lint: ${{ needs.lint.result }}"
           echo "unit-test: ${{ needs.unit-test.result }}"
           echo "build: ${{ needs.build.result }}"
+          echo "deploy: ${{ needs.deploy.result }}"
